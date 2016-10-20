@@ -50,8 +50,6 @@
 	</head>
 	<body>
 	
-		<@static.ajaxifyStatic />
-
 		<@menu.navbar />
 
 		<section class="container-fluid">
