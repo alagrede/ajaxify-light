@@ -1,4 +1,4 @@
-jQuery.ajaxifier = {
+var ajaxifier = {
 	isHistoryAvailable: true,
 	ajaxLinks: 'a:not(.noAjax)',
 	noAjaxLinks: '.noAjax',
@@ -25,7 +25,7 @@ jQuery.ajaxifier = {
         this.refreshMenu = options.refreshMenu;
 
 
-		$.ajaxifier.initHistory();
+		ajaxifier.initHistory();
 
 
 
@@ -41,12 +41,12 @@ jQuery.ajaxifier = {
 		});
 
 		// Pour quitter la page sans confirmation pour les liens
-		$("body").delegate("a."+$.ajaxifier.forceQuitClass, "click", function(e) {
+		$("body").delegate("a."+ajaxifier.forceQuitClass, "click", function(e) {
 			$(window).unbind('beforeunload');
 			return true;
 		});
 		// Pour quitter la page sans confirmation pour les form
-		$("body").delegate("form."+$.ajaxifier.forceQuitClass, "submit", function(e) {
+		$("body").delegate("form."+ajaxifier.forceQuitClass, "submit", function(e) {
 			e.stopPropagation();
 			$(window).unbind('beforeunload');
 			return true;
@@ -56,7 +56,7 @@ jQuery.ajaxifier = {
 		var processFormBody = function processFormBody(form, formData, extra, e) {
 
 
-  			if (form.hasClass($.ajaxifier.forceQuitClass)) {
+  			if (form.hasClass(ajaxifier.forceQuitClass)) {
   				return;
   			}
   			
@@ -92,7 +92,7 @@ jQuery.ajaxifier = {
       			processData: processData,
       			contentType: contentType,
                 success: function(html, status, xhr) { // Je récupère la réponse
-					$.ajaxifier.ajaxify(html, link, true);
+					ajaxifier.ajaxify(html, link, true);
 					return false;
                 }
             });
@@ -114,7 +114,7 @@ jQuery.ajaxifier = {
 
 
   		// Interception des click sur les liens de toute la page
-  		$("body").delegate($.ajaxifier.ajaxLinks, "click", function(e) {
+  		$("body").delegate(ajaxifier.ajaxLinks, "click", function(e) {
 
 
 			var link = $(this).attr('href');
@@ -124,7 +124,7 @@ jQuery.ajaxifier = {
 	               return;
 	        }
   			
-  			if ($this.hasClass($.ajaxifier.forceQuitClass)) {
+  			if ($this.hasClass(ajaxifier.forceQuitClass)) {
   				return;
   			}
 
@@ -139,7 +139,7 @@ jQuery.ajaxifier = {
                 type: "GET", // La méthode indiquée dans le formulaire (get ou post)
                 // Je sérialise les données (j'envoie toutes les valeurs présentes dans le formulaire)
                 success: function(html, status, xhr) { // Je récupère la réponse
-                	$.ajaxifier.ajaxify(html, link, true);
+                	ajaxifier.ajaxify(html, link, true);
                 },
 
 			});	
@@ -153,13 +153,19 @@ jQuery.ajaxifier = {
   			console.log("Back history");
   			console.log(event.state);
   			var query = document.location.pathname + document.location.search;
+
+  			if (document.location.hash != "") { // pour ne pas restaurer un état SPA
+  				ajaxifier.refreshMenu(query + document.location.hash);
+  				return;
+  			}
+
   			console.log(query);
   			if (event.state != null) {
 				// On recharge la page depuis le serveur
-				$.ajaxifier.loadFromServer(query);
+				ajaxifier.loadFromServer(query);
 			} else {
 				// On recharge la page depuis le serveur
-				$.ajaxifier.loadFromServer(document.location.pathname);
+				ajaxifier.loadFromServer(document.location.pathname);
   			}
   		}
   		
@@ -178,7 +184,7 @@ jQuery.ajaxifier = {
 	loadFromServer: function loadFromServer(url) {
 			$.get( url, function( html ) {
 				console.log("reload from server:" + url);
-				$.ajaxifier.ajaxify(html, url, false); // on n'ajoute pas de nouveau à l'historique
+				ajaxifier.ajaxify(html, url, false); // on n'ajoute pas de nouveau à l'historique
 				return false;
 			}).error(function(jqXHR, textStatus, errorThrown) {
                 if (textStatus == 'timeout')
@@ -193,9 +199,9 @@ jQuery.ajaxifier = {
 
 	initHistory: function initHistory() {
   		// Gestion de l'historique
-  		$.ajaxifier.isHistoryAvailable = true;
+  		ajaxifier.isHistoryAvailable = true;
   		if (typeof history.pushState === "undefined") {
-  			$.ajaxifier.isHistoryAvailable = false;
+  			ajaxifier.isHistoryAvailable = false;
   		} else {
   			var query = document.location.pathname + document.location.search;
   			console.log("Push initial state: " + $(document).prop('title') + ", " + query);
@@ -221,8 +227,8 @@ jQuery.ajaxifier = {
 		
 	changeContent: function changeContent(html) {
 
-		var data = $(html).find($.ajaxifier.refreshContent).children();
-		var currentNode = $( $.ajaxifier.refreshContent )[0];
+		var data = $(html).find(ajaxifier.refreshContent).children();
+		var currentNode = $( ajaxifier.refreshContent )[0];
 
 		// Clean children nodes
 		while (currentNode.hasChildNodes()) { 
@@ -283,37 +289,41 @@ jQuery.ajaxifier = {
 
 	ajaxify: function ajaxify(html, link, addToHistory) {
 
+        var myEvent = new CustomEvent("beforeAjaxifyChange");
+        document.body.dispatchEvent(myEvent);
+
+		
 		if (html == "") {
 			return;
 		}
 
 		// Extract head infos
-		var newHead = $.ajaxifier.extractHead(html);
+		var newHead = ajaxifier.extractHead(html);
 		var currentHead = $("head").children();
 		var title = $(html).filter('title').text();
 
 		// Merge head elements (only title)
 		$(newHead).each(function() {
-			$.ajaxifier.mergeHeadElement(currentHead, $(this)[0]);						  
+			ajaxifier.mergeHeadElement(currentHead, $(this)[0]);						  
 		});					  
 
 
 		// On remplace le titre de la page
-		$.ajaxifier.replaceTitle(title);
+		ajaxifier.replaceTitle(title);
 
 		// Remplacement du corps de la page
-		$.ajaxifier.changeContent(html);
+		ajaxifier.changeContent(html);
 
 		// Rafraichissement du menu
-		$.ajaxifier.refreshMenu(link);
+		ajaxifier.refreshMenu(link);
 
 		// Execution du JS inline de la page
-		$.ajaxifier.reloadScripts($( $.ajaxifier.refreshContent )[0]);
+		ajaxifier.reloadScripts($( ajaxifier.refreshContent )[0]);
 		console.log("init inline JS");
 
 
 		// Modification de l'historique
-		if ($.ajaxifier.isHistoryAvailable && addToHistory) {
+		if (ajaxifier.isHistoryAvailable && addToHistory) {
 			console.log("Push State: " + title + ", " + link);
 			history.pushState({}, title, link); //url	
 		}
